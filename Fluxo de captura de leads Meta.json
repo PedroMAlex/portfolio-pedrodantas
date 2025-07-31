@@ -1,0 +1,696 @@
+{
+  "name": "P11 | Leads de Formulario Meta",
+  "nodes": [
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{$json[\"query\"][\"hub.challenge\"]}}",
+        "options": {}
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        520
+      ],
+      "id": "d0b7b65f-1829-4afc-9ccd-27d0face7a13"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"query\"][\"hub.verify_token\"]}}",
+              "value2": "fluxautomate"
+            }
+          ]
+        }
+      },
+      "name": "IF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        740,
+        640
+      ],
+      "id": "05c6bfeb-c4e2-4e21-9bdc-73aa3bb8a10e"
+    },
+    {
+      "parameters": {},
+      "name": "NoOp",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        760
+      ],
+      "id": "c407d195-93fc-468b-8e5d-04e3c2fe96d7"
+    },
+    {
+      "parameters": {
+        "content": "\n# Cadastrar **webhook**\n",
+        "height": 460,
+        "width": 740,
+        "color": 3
+      },
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        460,
+        460
+      ],
+      "id": "063b44c4-1529-4151-bcce-25f209b1ce19"
+    },
+    {
+      "parameters": {
+        "content": "\n# Obter **dados de Facebook Leads**\n",
+        "height": 460,
+        "width": 1437.571119336593,
+        "color": 5
+      },
+      "name": "Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        460
+      ],
+      "id": "21293ffa-d128-4bdb-8edb-85603038762c"
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v21.0/{{$json[\"body\"][\"entry\"][0][\"changes\"][0][\"value\"][\"leadgen_id\"]}}",
+        "options": {},
+        "queryParametersUi": {
+          "parameter": [
+            {
+              "name": "access_token"
+            }
+          ]
+        }
+      },
+      "name": "Obter dados lead1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        1620,
+        640
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "id": "889cd62c-abed-455c-bbe5-76da305ae5a2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Acessa o JSON do caminho especificado\nconst input = $item(\"0\").$node[\"Aggregate1\"].json[\"data\"];\n\n// Verifica se o input é válido\nif (!Array.isArray(input) || input.length === 0) {\n    throw new Error(\"O JSON de entrada está vazio ou não é uma lista válida.\");\n}\n\n// Extrai os dados do primeiro item (assumindo que o input seja uma lista)\nconst firstItem = input[0];\n\n// Verifica se o campo field_data existe\nif (!firstItem.field_data || !Array.isArray(firstItem.field_data)) {\n    throw new Error(\"O campo 'field_data' está ausente ou não é uma lista.\");\n}\n\n// Define as perguntas que serão verificadas\nconst pergunta1 = \"você_acredita_que_oferecer_financiamento_em_84x_será_um_diferencial_para_sua_clínica\";\nconst pergunta2 = \"você_acredita_que_ter_uma_iara_disponível_7_dias_por_semana,__24_horas_por_dia,_seria_um_diferencial_para_sua_clínica?\";\nconst melhorHorario = \"qual_é_o_melhor_horário_para_te_apresentarmos_essa_solução?\";\n\n// Inicializa variáveis para armazenar os dados encontrados\nlet resultado = {};\n\n// Itera pelos campos no JSON e organiza os dados em um objeto\nfirstItem.field_data.forEach(field => {\n    const name = field.name;\n    const value = field.values[0]?.trim(); // Remove espaços adicionais ou underscores extras\n\n    // Adiciona o campo ao objeto de resultado\n    resultado[name] = value;\n});\n\n// Inicializa a variável para identificar qual pergunta foi encontrada\nlet perguntaEncontrada = \"\";\n\n// Verifica qual pergunta está presente no JSON e ajusta o resultado final\nif (resultado[pergunta1]) {\n    perguntaEncontrada = \"Pergunta 1\";\n    resultado = {\n        \"pergunta_encontrada\": perguntaEncontrada, // Adiciona o campo indicando a pergunta encontrada\n        \"email\": resultado[\"email\"],\n        \"full name\": resultado[\"full name\"],\n        \"qual_o_seu_telefone?\": resultado[\"qual_o_seu_telefone?\"],\n        [pergunta1]: resultado[pergunta1],\n        [melhorHorario]: resultado[melhorHorario]\n    };\n} else if (resultado[pergunta2]) {\n    perguntaEncontrada = \"Pergunta 2\";\n    resultado = {\n        \"pergunta_encontrada\": perguntaEncontrada, // Adiciona o campo indicando a pergunta encontrada\n        \"email\": resultado[\"email\"],\n        \"full name\": resultado[\"full name\"],\n        \"qual_o_seu_telefone?\": resultado[\"qual_o_seu_telefone?\"],\n        [pergunta2]: resultado[pergunta2],\n        \"você_tem_uma_clínica_ou_consultório_próprio?\": resultado[\"você_tem_uma_clínica_ou_consultório_próprio?\"],\n        [melhorHorario]: resultado[melhorHorario]\n    };\n} else {\n    throw new Error(\"Nenhuma das perguntas esperadas foi encontrada no JSON.\");\n}\n\n// Retorna o resultado final formatado\nreturn { result: resultado };\n"
+      },
+      "id": "133394d2-7c80-4c11-93a0-d0821ee4382f",
+      "name": "Code1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2020,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "id": "8c3813ae-63c1-40d3-a920-6335849db6ed",
+      "name": "Aggregate1",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1820,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1IxW57nZ4UbW-KeU207L0iKM-nc4ZNpMYeDeRuP_pvXs",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads 84x",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IxW57nZ4UbW-KeU207L0iKM-nc4ZNpMYeDeRuP_pvXs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Data": "={{ $now.format('dd/MM/yyyy HH:mm:ss') }}",
+            "Voce Acredita que o financiamento pode te ajudar?": "={{ $json.result['você_acredita_que_oferecer_financiamento_em_84x_será_um_diferencial_para_sua_clínica'].replaceAll(\"_\",\"\") }}",
+            "Telefone": "={{ $json.result['qual_o_seu_telefone?'] }}",
+            "Nome": "={{ $json.result['full name'] }}",
+            "Qual o melhor horário para uma reunião": "={{ $json.result['qual_é_o_melhor_horário_para_te_apresentarmos_essa_solução?'].replaceAll(\"_\",\"\") }}",
+            "Email": "={{ $json.result.email }}",
+            "De onde esta vindo": "Formulário 84X"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Data",
+              "displayName": "Data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Voce Acredita que o financiamento pode te ajudar?",
+              "displayName": "Voce Acredita que o financiamento pode te ajudar?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Você acredita que ter uma Yara disponível é um diferencial?",
+              "displayName": "Você acredita que ter uma Yara disponível é um diferencial?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Você tem uma clínica ou consultório próprio?",
+              "displayName": "Você tem uma clínica ou consultório próprio?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Qual o melhor horário para uma reunião",
+              "displayName": "Qual o melhor horário para uma reunião",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Instagram",
+              "displayName": "Instagram",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CONTATO ",
+              "displayName": "CONTATO ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "De onde esta vindo",
+              "displayName": "De onde esta vindo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "É Dentista?",
+              "displayName": "É Dentista?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "valor ingresso? ",
+              "displayName": "valor ingresso? ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Coluna 1",
+              "displayName": "Coluna 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Coluna 2",
+              "displayName": "Coluna 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "391d7e81-751c-424e-a7ae-0a981ce2905b",
+      "name": "Google Sheets1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2520,
+        540
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "oEhFXfgFEWcIFmhQ",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2ad04ea6-963d-46fd-a838-a859c720783b",
+              "leftValue": "={{ $json.result.pergunta_encontrada }}",
+              "rightValue": "Pergunta 1",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "efe0e342-3ad3-409f-8294-4be79305911b",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2240,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1IxW57nZ4UbW-KeU207L0iKM-nc4ZNpMYeDeRuP_pvXs",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Leads 84x",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IxW57nZ4UbW-KeU207L0iKM-nc4ZNpMYeDeRuP_pvXs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Voce Acredita que o financiamento pode te ajudar?": "=",
+            "Telefone": "={{ $json.result['qual_o_seu_telefone?'] }}",
+            "Nome": "={{ $json.result['full name'] }}",
+            "Qual o melhor horário para uma reunião": "={{ $json.result['qual_é_o_melhor_horário_para_te_apresentarmos_essa_solução?'].replaceAll(\"_\",\"\") }}",
+            "Email": "={{ $json.result.email }}",
+            "De onde esta vindo": "Formulário Iara",
+            "Você tem uma clínica ou consultório próprio?": "={{ $json.result[\"você_tem_uma_clínica_ou_consultório_próprio?\"].replaceAll(\"_\",\"\") }}",
+            "Você acredita que ter uma Yara disponível é um diferencial?": "={{ $json.result[\"você_acredita_que_ter_uma_yara_disponível_7_dias_por_semana,__24_horas_por_dia,_seria_um_diferencial_para_sua_clínica?\"].replaceAll(\"_\",\"\") }}",
+            "Data": "={{ $now.format('dd/MM/yyyy HH:mm:ss') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Data",
+              "displayName": "Data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Voce Acredita que o financiamento pode te ajudar?",
+              "displayName": "Voce Acredita que o financiamento pode te ajudar?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Você acredita que ter uma Yara disponível é um diferencial?",
+              "displayName": "Você acredita que ter uma Yara disponível é um diferencial?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Você tem uma clínica ou consultório próprio?",
+              "displayName": "Você tem uma clínica ou consultório próprio?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Qual o melhor horário para uma reunião",
+              "displayName": "Qual o melhor horário para uma reunião",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Telefone",
+              "displayName": "Telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Instagram",
+              "displayName": "Instagram",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CONTATO ",
+              "displayName": "CONTATO ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "De onde esta vindo",
+              "displayName": "De onde esta vindo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "É Dentista?",
+              "displayName": "É Dentista?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "valor ingresso? ",
+              "displayName": "valor ingresso? ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Coluna 1",
+              "displayName": "Coluna 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Coluna 2",
+              "displayName": "Coluna 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "076c3f89-97fb-42c1-b98d-a0cd11726997",
+      "name": "Google Sheets2",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2520,
+        760
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "oEhFXfgFEWcIFmhQ",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "5b80b2fb-9607-4301-a0a1-579f1440098c",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        500,
+        640
+      ],
+      "webhookId": "5b80b2fb-9607-4301-a0a1-579f1440098c",
+      "id": "8502581f-495a-43a7-b5f0-b57edf4fcd0b"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "3300ecee-3df6-4c2a-bb7c-c1128568bc26",
+        "options": {}
+      },
+      "name": "Webhook cadastros",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        1420,
+        640
+      ],
+      "webhookId": "3300ecee-3df6-4c2a-bb7c-c1128568bc26",
+      "id": "14fe1f75-bb28-4c77-a879-9e7b5208aef7"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "IF": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obter dados lead1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets1": {
+      "main": [
+        []
+      ]
+    },
+    "Google Sheets2": {
+      "main": [
+        []
+      ]
+    },
+    "Webhook cadastros": {
+      "main": [
+        [
+          {
+            "node": "Obter dados lead1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "12eabda9-b934-4c1b-93eb-8cfbd23a43e2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "619b17cd1b492527794139da1bcb865e53d9b06f94f0bce867b7bc44cff77b3b"
+  },
+  "id": "c84UDt7jSnNZkhXK",
+  "tags": [
+    {
+      "createdAt": "2025-02-12T12:22:31.536Z",
+      "updatedAt": "2025-02-12T12:22:31.536Z",
+      "id": "1p5FwcznKzLziB3N",
+      "name": "GPR"
+    }
+  ]
+}
